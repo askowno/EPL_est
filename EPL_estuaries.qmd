@@ -1,0 +1,445 @@
+---
+title: "EPL_estuaries"
+format: html
+---
+
+#### Set up the Project and import the data
+
+```{r}
+# Add packages: 
+library(sf)
+library(tidyverse)
+library(readxl)
+
+# Add spatial data 
+est_v <-st_read("C:/Users/skownoa/Dropbox/NBAwork/Estuaries/NBA2018_Estuaries_RLE_PL_COND_PRES_PRIORsj.shp") 
+
+pa <- st_read("C:/Users/skownoa/Dropbox/NBAwork/NLC_change/NLC_Change.gdb", layer = "SANBI_PA_2024Q4_Mar2025") 
+
+# Add tabular data
+est_t <- read_excel("C:/Users/skownoa/Dropbox/NBAwork/Estuaries/EstuaryHealth2025.xlsx", sheet = "Data")
+
+
+```
+
+#### Clean up input data
+
+```{r}
+# Protected Areas - Subset PA data for 2018 and 2024 using DECL_YEAR, excluding properties degazetted using UNDECL_YEA. In preparation for this selection DECL_YEAR is set to 0 when unknown, and UNDCL_YEA is set to 9999 for those PAs that have never been degazetted.
+options(scipen = 999)
+
+pa2018 <- subset(pa, DECL_YEAR <  2019 & UNDECL_YEA >2018)
+pa2024 <- subset(pa, DECL_YEAR <  2025 & UNDECL_YEA >2024)
+
+# Estuaries have seperate features for EFZ SHORE and EFZ, merge these together for calculating PA extent and EOO etc. 
+est_v2 <- est_v %>%
+  group_by(EST_IDw) %>%
+  summarise(across(where(~ !inherits(.x, "sfc")), first),  
+            geometry = st_union(geometry),                
+            .groups = "drop") %>%
+  select(EST_IDw) %>%
+  rename(EstID = EST_IDw)
+  
+est_t2 <- est_t %>%
+  select(EstID, NAME, Full_Ecosystem_type_name, Estuary_Ecosystem_Type_Code, EFZ_Ha, score24, score18, score11, Fishing_Pressure)
+
+# combined estuary data 
+est <- est_v2 %>%
+  left_join(est_t2, by = "EstID") %>%
+  # recalculate EFZ area m2 to check the data from Lara is correct
+   mutate(efz_area = as.numeric(st_area(.)))
+
+
+```
+
+#### Spatial Analysis
+
+```{r}
+# Intersect PA with Estuaris at each time point
+pa18_est <- st_intersection(est, pa2018)
+pa18_est <- pa18_est %>%
+  mutate(area18pa = as.numeric(st_area(.))) %>%
+   group_by(EstID) %>%
+  summarise(sum_area18pa = sum((as.numeric(area18pa))), 
+            .groups = "drop") %>%
+  st_drop_geometry()
+  
+pa24_est <- st_intersection(est, pa2024)
+pa24_est <- pa24_est %>%
+  mutate(area24pa = as.numeric(st_area(.))) %>%
+   group_by(EstID) %>%
+  summarise(sum_area24pa = sum((as.numeric(area24pa))), 
+            .groups = "drop") %>%
+  st_drop_geometry()
+
+# Join the PA extent calculations to the estuary   data (using EstID) and then group by est  type and summarise by Condition class
+options(scipen = 999)
+
+est <- est %>%
+  st_drop_geometry() %>%
+  left_join(pa24_est, by = "EstID") %>%
+  left_join(pa18_est, by = "EstID") %>%
+  mutate(across(c(sum_area24pa, sum_area18pa), ~ replace_na(.x, 0))) %>%
+  # convert health scores to Condition Classes 
+  mutate(cond11 = case_when(
+    round(score11, 0) >= 90 ~ "Natural",
+    round(score11, 0) >= 75 ~ "NearNatural",
+    round(score11, 0) >= 60 ~ "Moderate",
+    round(score11, 0) >= 40 ~ "Heavily",
+    TRUE ~ "Severely"
+  )) %>%
+  mutate(cond18 = case_when(
+    round(score18, 0) >= 90 ~ "Natural",
+    round(score18, 0) >= 75 ~ "NearNatural",
+    round(score18, 0) >= 60 ~ "Moderate",
+    round(score18, 0) >= 40 ~ "Heavily",
+    TRUE ~ "Severely"
+  )) %>%
+   mutate(cond24 = case_when(
+    round(score24, 0) >= 90 ~ "Natural",
+    round(score24, 0) >= 75 ~ "NearNatural",
+    round(score24, 0) >= 60 ~ "Moderate",
+    round(score24, 0) >= 40 ~ "Heavily",
+    TRUE ~ "Severely"
+  )) 
+
+
+```
+
+#### Summarise data per type
+
+```{r}
+
+#summarise by est  type including extent per type per condition class - this allows for inclusion of condition in the EPL formula
+options(scipen = 999)
+
+# overall type x cond summary
+
+est_type_18 <- est %>%
+    group_by(Full_Ecosystem_type_name, cond18) %>%
+  summarise(extent = sum(as.numeric(efz_area), na.rm = TRUE)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = cond18, values_from = extent, values_fill = list(extent = 0))  %>%
+  mutate(tot_ext18 = rowSums(across(c(Natural, NearNatural, Moderate, Heavily, Severely))))
+
+est_type_24 <- est %>%
+    group_by(Full_Ecosystem_type_name, cond24) %>%
+  summarise(extent = sum(as.numeric(efz_area), na.rm = TRUE)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = cond24, values_from = extent, values_fill = list(extent = 0))  %>%
+  mutate(tot_ext24 = rowSums(across(c(Natural, NearNatural, Moderate, Heavily, Severely))))
+
+
+# PA x type x cond  summary 
+ est_type_pa18 <- est %>%
+    group_by(Full_Ecosystem_type_name, cond18) %>%
+  summarise(extent = sum(as.numeric(sum_area18pa), na.rm = TRUE)) %>%
+  ungroup()  %>%
+  pivot_wider(names_from = cond18, values_from = extent,values_fill = list(extent = 0))  %>%
+  mutate(ext_pa18 = rowSums(across(c(Natural, NearNatural, Moderate, Heavily, Severely))))
+
+ est_type_pa24 <- est %>%
+    group_by(Full_Ecosystem_type_name, cond24) %>%
+  summarise(extent = sum(as.numeric(sum_area24pa), na.rm = TRUE)) %>%
+  ungroup()  %>%
+  pivot_wider(names_from = cond24, values_from = extent,values_fill = list(extent = 0))  %>%
+  mutate(ext_pa24 = rowSums(across(c(Natural, NearNatural, Moderate, Heavily, Severely))))
+  
+ # PA X type x fishing summary
+ est_type_pa18_hfp <- est %>%
+    group_by(Full_Ecosystem_type_name, Fishing_Pressure) %>%
+  summarise(extent = sum(as.numeric(sum_area18pa), na.rm = TRUE)) %>%
+  ungroup()  %>%
+  pivot_wider(names_from = Fishing_Pressure, values_from = extent,values_fill = list(extent = 0))  %>%
+  mutate(ext_pa18_hfp = rowSums(across(c(VH, H)))) %>%
+  select(Full_Ecosystem_type_name, ext_pa18_hfp)
+ 
+est_type_pa24_hfp <- est %>%
+    group_by(Full_Ecosystem_type_name, Fishing_Pressure) %>%
+  summarise(extent = sum(as.numeric(sum_area24pa), na.rm = TRUE)) %>%
+  ungroup()  %>%
+  pivot_wider(names_from = Fishing_Pressure, values_from = extent,values_fill = list(extent = 0))  %>%
+  mutate(ext_pa24_hfp = rowSums(across(c(VH, H)))) %>%
+  select(Full_Ecosystem_type_name, ext_pa24_hfp)
+ 
+ # Join the 4 tables above - this makes a single table in which all the required metrics can be found to compute EPL (note tot ext 18 and to ext 24 are identical )
+ 
+ est_type_metrics <- est_type_18 %>%
+   select(Full_Ecosystem_type_name, tot_ext18) %>%
+   left_join(est_type_pa18, by = "Full_Ecosystem_type_name") %>%
+   rename(Natural18=Natural, NearNatural18= NearNatural, Moderate18= Moderate, Heavily18= Heavily, Severely18 = Severely) %>%
+   left_join(est_type_pa18_hfp, by = "Full_Ecosystem_type_name") %>%
+   left_join(est_type_pa24, by = "Full_Ecosystem_type_name") %>%
+   left_join(est_type_pa24_hfp, by = "Full_Ecosystem_type_name") %>%
+# 2018 metrics
+   mutate(prp_pa18 = ext_pa18/tot_ext18) %>%
+   # WP rule requires extent A and B within PA; less high fishing pressure areas within PA
+   mutate(prp_pa18_ab_hfp = (Natural18 + NearNatural18 - ext_pa18_hfp)/tot_ext18) %>% 
+   # MP PP NP requires proportioal contribution based on condition
+   mutate(prp_pa18_model = (Natural18 + NearNatural18 + (0.5*Moderate18) + (0.3*Heavily18) + (0.1*Severely18))/tot_ext18) %>%
+   mutate(EPL18_all = case_when( prp_pa18 >= 0.3 ~ "WP", 
+                                 prp_pa18 >= 0.15 ~ "MP",
+                                 prp_pa18 >= 0.015 ~ "PP",
+                                 TRUE ~ "NP")) %>% 
+    mutate(EPL18_model = case_when( prp_pa18_ab_hfp >= 0.3 ~ "WP", 
+                                 prp_pa18_model >= 0.15 ~ "MP",
+                                 prp_pa18_model >= 0.015 ~ "PP",
+                                 TRUE ~ "NP")) %>%
+# 2024 metrics   
+   mutate(prp_pa24 = ext_pa24/tot_ext18) %>% # note tot_ext 2018 and 2024 are same
+   # WP rule requires extent A and B within PA; less high fishing pressure areas within PA
+      mutate(prp_pa24_ab_hfp = (Natural + NearNatural - ext_pa24_hfp)/tot_ext18) %>% 
+   # MP PP NP requires proportioal contribution base don condition
+   mutate(prp_pa24_model = (Natural + NearNatural + (0.5*Moderate) + (0.3*Heavily) + (0.1*Severely))/tot_ext18) %>%
+   mutate(EPL24_all = case_when( prp_pa24 >= 0.3 ~ "WP", 
+                                 prp_pa24 >= 0.15 ~ "MP",
+                                 prp_pa24 >= 0.015 ~ "PP",
+                                 TRUE ~ "NP")) %>% 
+    mutate(EPL24_model = case_when( prp_pa24_ab_hfp >= 0.3 ~ "WP", 
+                                 prp_pa24_model >= 0.15 ~ "MP",
+                                 prp_pa24_model >= 0.015 ~ "PP",
+                                 TRUE ~ "NP")) 
+   # reattached bioregions
+ bioreg <- est_t %>%
+  select(Full_Ecosystem_type_name, Biogeographical_Region) %>%
+      distinct(Full_Ecosystem_type_name, .keep_all = TRUE)
+ 
+ est_type_metrics <- est_type_metrics %>%
+      left_join(bioreg , by = "Full_Ecosystem_type_name" )
+ 
+    
+   # export a csv of results - Condition and EPL per river type 2018 and 2024
+   write.csv(est_type_metrics, file = "outputs/epl_est_metrics_per_type.csv")
+```
+
+#### Output tables
+
+```{r}
+# 2018 summaries
+# make summary counts of EPL categories per HGM
+ epl18_sum <- est_type_metrics %>%
+    group_by(EPL18_model, Biogeographical_Region) %>%
+  summarise(count = n(),.groups = 'drop') %>%
+  pivot_wider(names_from = EPL18_model, 
+              values_from = count, values_fill = 0) %>%
+  relocate(WP, .before = MP)%>%
+  relocate(NP, .after = PP) %>%
+   # Add row-wise TOTAL
+  rowwise() %>%
+  mutate(Total = sum(c_across(where(is.numeric)))) %>%
+  ungroup() %>%
+  # Add TOTAL row (column-wise sums)
+  bind_rows(summarise(., Biogeographical_Region = "Total", across(where(is.numeric), sum))) %>%
+  # Add EPLindex
+  mutate(EPLI = ((WP*3)+(MP*2)+(PP*1)+(NP*0))/((WP+MP+PP+NP)*3)) %>%
+    mutate(Biogeographical_Region = factor(Biogeographical_Region, levels = c("Total", "dTropical", "cSubTrop" , "bWTemp", "aCTemp"))) %>% ## ggplot plots inverted factors!
+   arrange(Biogeographical_Region)
+ 
+ # export a csv of results - COUNT of EPL 18 per biogr 
+ write.csv(epl18_sum, file = "outputs/epl18_est_sum_count.csv") 
+ 
+  # make summary of extent of EPL
+ epl18_sum_ext <- est_type_metrics %>%
+    group_by(EPL18_model, Biogeographical_Region) %>%
+  summarise(extent = round(sum(tot_ext18)/1000000, 0),.groups = 'drop') %>%
+  pivot_wider(names_from = EPL18_model, 
+              values_from = extent, values_fill = 0) %>%
+  relocate(WP, .before = MP)%>%
+  relocate(NP, .after = PP) %>%
+   # Add row-wise TOTAL
+  rowwise() %>%
+  mutate(Total = sum(c_across(where(is.numeric)))) %>%
+  ungroup() %>%
+  # Add TOTAL row (column-wise sums)
+  bind_rows(summarise(., hgm_simple = "Total", across(where(is.numeric), sum))) %>%
+    mutate(Biogeographical_Region = factor(Biogeographical_Region, levels = c("Total", "dTropical", "cSubTrop" , "bWTemp", "aCTemp"))) %>% ## ggplot plots inverted factors!
+   arrange(Biogeographical_Region)
+ 
+ # export a csv of results - EXTENT (km) of EPL 18 per slope zone
+  write.csv(epl18_sum_ext, file = "outputs/epl18_est_sum_ext.csv")
+
+  # Convert extent per epl category to proportion 
+  epl18_sum_prpext <- epl18_sum_ext %>%
+  filter(Biogeographical_Region != "Total") %>%
+  mutate(across(c(WP, MP, PP, NP), ~ round(.x / Total, 3))) %>%
+  select(Biogeographical_Region, WP, MP, PP, NP)
+  
+  # export a csv of results - PROPORTIONAL EXTENT  (km) of EPL 18 per slope zone
+   write.csv(epl18_sum_prpext, file = "outputs/epl18_est_sum_prp.csv")
+ 
+  # 2024 summaries
+  # make summary counts of EPL
+  epl24_sum <- est_type_metrics %>%
+    group_by(EPL24_model, Biogeographical_Region) %>%
+  summarise(count = n(),.groups = 'drop') %>%
+  pivot_wider(names_from = EPL24_model, 
+              values_from = count, values_fill = 0) %>%
+  relocate(WP, .before = MP)%>%
+  relocate(NP, .after = PP) %>%
+   # Add row-wise TOTAL
+  rowwise() %>%
+  mutate(Total = sum(c_across(where(is.numeric)))) %>%
+  ungroup() %>%
+  # Add TOTAL row (column-wise sums)
+  bind_rows(summarise(., Biogeographical_Region = "Total", across(where(is.numeric), sum))) %>%
+  # Add EPLindex
+  mutate(EPLI = ((WP*3)+(MP*2)+(PP*1)+(NP*0))/((WP+MP+PP+NP)*3)) %>%
+     mutate(Biogeographical_Region = factor(Biogeographical_Region, levels = c("Total", "dTropical", "cSubTrop" , "bWTemp", "aCTemp"))) %>% ## ggplot plots inverted factors!
+   arrange(Biogeographical_Region)
+ 
+  
+ # export a csv of results - COUNT of EPL 18 per slope zone
+ write.csv(epl24_sum, file = "outputs/epl24_est_sum_count.csv") 
+ 
+ # make summary of extent of EPL
+ epl24_sum_ext <- est_type_metrics %>%
+    group_by(EPL24_model, Biogeographical_Region) %>%
+  summarise(extent = round(sum(tot_ext18)/1000000, 0),.groups = 'drop') %>%
+  pivot_wider(names_from = EPL24_model, 
+              values_from = extent, values_fill = 0) %>%
+  relocate(WP, .before = MP)%>%
+  relocate(NP, .after = PP) %>%
+   # Add row-wise TOTAL
+  rowwise() %>%
+  mutate(Total = sum(c_across(where(is.numeric)))) %>%
+  ungroup() %>%
+  # Add TOTAL row (column-wise sums)
+  bind_rows(summarise(., Biogeographical_Region = "Total", across(where(is.numeric), sum))) %>%
+   mutate(Biogeographical_Region = factor(Biogeographical_Region, levels = c("Total", "dTropical", "cSubTrop" , "bWTemp", "aCTemp"))) %>% ## ggplot plots inverted factors!
+   arrange(Biogeographical_Region)
+ 
+ 
+ # export a csv of results - EXTENT (km) of EPL 18 per slope zone
+  write.csv(epl24_sum_ext, file = "outputs/epl24_est_sum_ext.csv")
+ 
+ epl24_sum_prpext <- epl24_sum_ext %>%
+  filter(Biogeographical_Region != "Total") %>%
+  mutate(across(c(WP, MP, PP, NP), ~ round(.x / Total, 3))) %>%
+  select(Biogeographical_Region, WP, MP, PP, NP)
+ 
+ # export a csv of results - PROPORTIONAL EXTENT  (km) of EPL 18 per biogr 
+   write.csv(epl24_sum_prpext, file = "outputs/epl24_est_sum_prp.csv")
+```
+
+#### **Make graphs for NBA**
+
+```{r}
+
+# load nbaR package : first run this in console devtools::install_github("SANBI-NBA/nbaR") 
+library(nbaR)
+library(extrafont) # this has tools for embedding fonts in vector graphics which 
+# is required by the design team of the booklet.
+loadfonts(device = "pdf") # this is required as device = cairo_pdf is not compatible with CorelDraw
+
+# Use NBA package to make EPL graph (need high res output for booklet)
+EPL24count <- epl24_sum %>%
+    rename(`Well Protected` = WP, 
+           `Moderately Protected` = MP, 
+           `Poorly Protected` = PP, 
+           `Not Protected` = NP ) # %>%
+  # select(-...1) # required if importing from CSV
+ 
+epl24_bar_plot_count <- nba_plot(EPL24count,
+                  `Biogeographical_Region`,
+                  2:5,
+                 CHRT = "bar",
+                 NUM = TRUE,
+                 LAB = "Percentage of ecosystem types",
+                SAVE = NULL,
+                SCALE_TEXT = 0.6)
+
+epl24_bar_plot_count <- epl24_bar_plot_count +
+  theme(
+    legend.position = "bottom",             # keep it at the bottom
+    legend.margin = margin(l = -45, r = -5, t = -5, b = -5)) 
+# to tweak position of legend uselegend.margin to prevent it being cut off: 
+# make l more negative to shift left etc 
+# but it is also affected by SCALE_TEXT above
+
+#export the graph
+ggsave(
+  filename = "outputs/epl24_est_bar_plot_count.png", # File name
+  plot = epl24_bar_plot_count,                  # Plot object
+  #device = "pdf",                        # File format
+  width = 9, height = 7, units = "cm"   # Dimensions
+)
+
+# graphs for extent per slope zone per epl category
+
+EPL24ext <- epl24_sum_ext %>%
+    rename(`Well Protected` = WP, 
+           `Moderately Protected` = MP, 
+           `Poorly Protected` = PP, 
+           `Not Protected` = NP ) # %>%
+  # select(-...1) # required if importing from CSV
+ 
+epl24_bar_plot_ext <- nba_plot(EPL24ext,
+                  `Biogeographical_Region`,
+                  2:5,
+                 CHRT = "bar",
+                 NUM = FALSE,
+                 LAB = "Percentage of ecosystem extent",
+                SAVE = NULL, 
+                SCALE_TEXT = 0.6)
+
+epl24_bar_plot_ext <- epl24_bar_plot_ext +
+  theme(
+    legend.position = "bottom",             # keep it at the bottom
+    legend.margin = margin(l = -45, r = -5, t = -5, b = -5)) 
+# to tweak position of legend uselegend.margin to prevent it being cut off: 
+# make l more negative to shift left etc 
+# but it is also affected by SCALE_TEXT above
+
+#export the graph
+ggsave(
+  filename = "outputs/epl24_est_bar_plot_ext.pdf", # File name
+  plot = epl24_bar_plot_ext,                  # Plot object
+  device = "pdf",                        # File format
+  width = 9, height = 7, units = "cm"   # Dimensions
+)
+
+# Make a line plot of EPL Index using 2018 and 2014 timepoints - request Natasha to impve this or add to package.
+
+EPLI <- epl24_sum %>%
+  select(Biogeographical_Region, EPLI) %>% 
+  rename(EPLI24 = EPLI) %>%
+   left_join(epl18_sum, by ="Biogeographical_Region") %>%
+   rename(EPLI18 = EPLI) %>%
+   rename(Zone = Biogeographical_Region) %>%
+  select(Zone,EPLI18, EPLI24) %>%
+  pivot_longer(cols = c(2,3), names_to = "Year", values_to = "EPLI") %>%
+    mutate(Year = case_when(
+    Year == "EPLI18" ~ "2018",
+    Year == "EPLI24" ~ "2024",
+    TRUE ~ Year
+  ))
+  
+ epli_line_plot <- ggplot(EPLI, aes(x = Year, y = EPLI, group = Zone)) +
+  geom_line(aes(linetype = Zone, color = Zone), linewidth = 1.2) +
+  geom_point(aes(color = Zone), size = 2) +
+  theme_minimal() +
+  labs(x = "Year", y = "EPLI") +
+  scale_x_discrete(limits = c("2018", "2024")) +
+  scale_color_manual(values = c(
+    "Total" = "black",
+    "aCTemp" = "blue",
+    "bWTemp" = "darkgreen",
+    "cSubTrop" = "brown",
+    "dTropical" = "orange"
+  )) +
+  coord_cartesian(ylim = c(0.1, 0.9)) +
+    guides(color = guide_legend(reverse = TRUE),
+         linetype = guide_legend(reverse = TRUE)) +
+  theme(legend.title = element_blank())
+  
+   
+  epli_line_plot
+  
+  #export the graph
+ggsave(
+  filename = "outputs/epli_est_line_plot.pdf", # File name
+  plot = epli_line_plot,                   # Plot object
+  device = "pdf",                        # File format
+  width = 12, height = 10, units = "cm",   # Dimensions
+)
+```

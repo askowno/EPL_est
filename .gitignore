@@ -21,6 +21,14 @@
 # RStudio files
 .Rproj.user/
 
+			# Temporary files
+		*.log
+		*.tmp
+	
+		# System files
+		.DS_Store       # macOS
+     Thumbs.db       # Windows
+
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
