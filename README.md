@@ -16,13 +16,13 @@ Estuarine Health Scores are assigned to PES categories A-F and Condition Classes
 
 | Estuarine Health SCORE | Ecological CLASS | Condition CATEGORY           |
 |------------------------|------------------|------------------------------|
-| \>= 90                 | A                | Natural/Neat Natural         |
+| \>= 90                 | A                | Natural                      |
 | \>=75 & \< 90          | B                | Natural/Near Natural         |
 | \>= 60 & \< 75         | C                | Moderately Modified          |
 | \>=40 & \< 60          | D                | Heavily Modified             |
 | \< 40                  | E/F              | Severely/Critically Modified |
 
-Protection Level is an indicator developed in South Africa that measures the representation of ecosystem types within the PA network. The extent of each ecosystem type within the PA network is expressed as a proportion of the total extent. Four categories of Ecosystem Protection Level are calculated per ecosystem type (n= 100).
+Protection Level is an indicator developed in South Africa that measures the representation of ecosystem types within the PA network. The extent of each ecosystem type within the PA network is expressed as a proportion of the total extent. Four categories of Ecosystem Protection Level are calculated per ecosystem type (n= 22).
 
 -   Well Protected: 100% of the PA target within PA network; AND only A&B condition estuaries contribute; AND areas under heavy and very heavy fishing pressure are excluded from contributing
 
@@ -32,7 +32,7 @@ Protection Level is an indicator developed in South Africa that measures the rep
 
 -   Not Protected: less than 5% of PA target within the PA network; and A&B condition estuaries contribute 100%, C condition wetlands contribute 50%, D condition estuaries contribute 30% and E&F condition estuaries contribute 10%
 
-The PA target was historically set at 20% for marine and estuarine ecosystems, but with the adoption of the 30% targets for Target 3 of the Global Biodiversity Framework - the PA target was increased to 30% in the EPL calculations (previous time points (2018) were recalculated using this higher target). Ecosystem condition data (based on XXXX) for each time point allow for only good condition estuaries without gill netting to be considered representative for Well Protected status; while for MP, PP and NP the condition of the estuaries is used to calculate their contribution to meeting targets - higher integrity / condition estuaries contribute more to meeting PA targets than low integrity / condition estuaries .
+The PA target was historically set at 20% for marine and estuarine ecosystems, but with the adoption of the 30% targets for Target 3 of the Global Biodiversity Framework - the PA target was increased to 30% in the EPL calculations (previous time points (2018) were recalculated using this higher target). Ecosystem condition data (based on XXXX) for each time point allow for only good condition estuaries without heavey fishing pressure (especially gill-netting) to be considered representative for Well Protected status; while for MP, PP and NP the condition of the estuaries is used to calculate their contribution to meeting targets such that higher integrity / condition estuaries contribute more to meeting PA targets than low integrity / condition estuaries.
 
 #### **Results:**
 
