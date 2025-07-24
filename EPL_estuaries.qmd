@@ -459,3 +459,14 @@ ggsave(
 
 # for pdf use device = "pdf" and drop resolution 
 ```
+
+```{r}
+# Prepare output spatial data 
+est_epl_res_v <- est_v2 %>%
+  left_join(est_t2, by = "outletID") %>%
+  select(outletID, full_ecosystem_type_name, est_name) %>%
+  left_join(est_type_metrics, by = "full_ecosystem_type_name") %>%
+  relocate(biogeographical_zone, .after = full_ecosystem_type_name)
+ 
+st_write(est_epl_res_v, "C:/Users/skownoa/Dropbox/NBAwork/Estuaries/est_epl_results.gpkg") 
+```
