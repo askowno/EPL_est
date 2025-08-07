@@ -11,16 +11,18 @@ library(sf)
 library(tidyverse)
 library(readxl)
 
+
 # Add spatial data - use IEM Jan 2025 then extract Estuaries
 est_v <-st_read("C:/Users/skownoa/Dropbox/NBAwork/IEMworking/IEM5_12_07012025.gdb", layer = "IEM5_12_07012025") 
 est_v <- est_v %>%
   mutate(outletID = as.numeric(E_EstID)) %>% # IEM miss names outletID as EstID (these are different codes)
   filter(outletID > 0, E_Est_BrdG != "Micro-System") # select only estuaries and exclude micros 
 
-pa <- st_read("C:/Users/skownoa/Dropbox/NBAwork/NLC_change/NLC_Change.gdb", layer = "SANBI_PA_2024Q4_Mar2025") 
-
 # Add tabular data (in excel change sheet name to Data, and remove last two rows on NAs, change cols with numbers at start of name )
-est_t <- read_excel("C:/Users/skownoa/Dropbox/NBAwork/Estuaries/estuary_assesment2025_v1.xlsx", sheet = "Data")
+est_t <- read_excel("C:/Users/skownoa/Dropbox/NBAwork/Estuaries/estuary_assesment2025_v8.xlsx", sheet = "Data")
+
+
+pa <- st_read("C:/Users/skownoa/Dropbox/NBAwork/NLC_change/NLC_Change.gdb", layer = "SANBI_PA_2024Q4_Mar2025") 
 
 
 ```
@@ -39,15 +41,25 @@ est_v2 <- est_v %>%
   group_by(outletID) %>%
   summarise(Shape = st_union(Shape), .groups = "drop")  
 
-# select colums  required  from health spreadsheet import
+# select colums from  health spreadsheet import
 est_t2 <- est_t %>%
-  select(outletID,  estID, east_DD, south_DD, est_name, full_ecosystem_type_name, est_ecosystem_type_code, biogeographical_zone, efz_ha, condition24, condition18, condition11, fishing_effort24, fishing_effort18, fishing_effort11)
+  select(outletID,  estID, east_DD, south_DD, est_name, full_ecosystem_type_name, est_ecosystem_type_code, biogeographical_zone, efz_ha, `2025_est_condition`, `2018_est_condition`, `2011_est_condition`, Pressure_2025_fishing_effort_DEFF, Pressure_2018_fishing_effort_DEFF, Pressure_2011_fishing_effort_DEFF, `hundred_km-zone`, `Condition_100km-zone`, fish, fish2018) %>% 
+# clean up names for r
+  rename(hund_km_zone =`hundred_km-zone`, hund_km_zone_cond = `Condition_100km-zone`, 
+       condition24 =`2025_est_condition`, condition18 =`2018_est_condition`, 
+       condition11 = `2011_est_condition`, fishing_effort24 = Pressure_2025_fishing_effort_DEFF,
+       fishing_effort18 = Pressure_2018_fishing_effort_DEFF, 
+       fishing_effort11 = Pressure_2011_fishing_effort_DEFF) %>% 
+  #fix Vh case 
+  mutate(fishing_effort24 = ifelse(fishing_effort24 == "Vh", "VH", fishing_effort24)) %>%
+  # drop black rows at end of table
+  filter(!is.na(outletID ))
 
-# combined estuary data 
+# combined estuary data into a table
 est <- est_v2 %>%
   left_join(est_t2, by = "outletID") %>%
-  #  recalculate EFZ area m2 to check the data from Lara is correct
-  mutate(efz_area = as.numeric(st_area(.))) # use this in later cLac as it is in m2
+  # recalculate EFZ area m2 to check the data from Lara is correct
+   mutate(efz_area = as.numeric(st_area(.))) 
 
 ```
 
