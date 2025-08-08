@@ -394,7 +394,7 @@ epl24_bar_plot_count <- epl24_bar_plot_count +
 
 #export the graph
 ggsave(
-  filename = "outputs/epl24_est_bar_plot_count.png", # File name
+  filename = "outputs/epl24_est_bar_plot_count.jpeg", # File name
   plot = epl24_bar_plot_count,                  # Plot object
   width = 9, height = 7, units = "cm"   # Dimensions
 )
@@ -427,7 +427,7 @@ epl24_bar_plot_ext <- epl24_bar_plot_ext +
 
 #export the graph
 ggsave(
-  filename = "outputs/epl24_est_bar_plot_ext.png", # File name
+  filename = "outputs/epl24_est_bar_plot_ext.jpeg", # File name
   plot = epl24_bar_plot_ext,                  # Plot object
   width = 9, height = 7, units = "cm"   # Dimensions
 )
@@ -468,7 +468,7 @@ EPLI <- epl24_sum %>%
 
  #export the graph
 ggsave(
-  filename = "outputs/epli_est_line_plot.png", 
+  filename = "outputs/epli_est_line_plot.jpeg", 
   plot = epli_line_plot,                   
   width = 12, height = 10, units = "cm")
 

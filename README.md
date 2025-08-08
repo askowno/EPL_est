@@ -45,9 +45,9 @@ Summary table - extent of estuarine per biogeographic zone per EPL category [epl
 Estuarine Ecosystem Protection Level 2025 - plots
 
 | Count of Ecosystem Types per EPL category | Extent of Ecosystem Types per EPL category |
-|----|----|
-| ![](outputs/epl24_est_bar_plot_count.png) | ![](outputs/epl24_est_bar_plot_ext.png) |
+|------------------------------------|------------------------------------|
+| ![](outputs/epl24_est_bar_plot_count.jpeg) | ![](outputs/epl24_est_bar_plot_ext.jpeg) |
 
 EPL Index - showing decline in protection level for Subtropical Estuaries in particular - due to fishing pressures
 
-![](outputs/epli_est_line_plot.png)
+![](outputs/epli_est_line_plot.jpeg){width="339"}
