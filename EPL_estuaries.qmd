@@ -10,6 +10,7 @@ format: html
 library(sf)
 library(tidyverse)
 library(readxl)
+library(stringr)
 
 
 # Add spatial data - use IEM Jan 2025 then extract Estuaries
@@ -238,8 +239,10 @@ est_type_pa24_hfp <- est %>%
       distinct(full_ecosystem_type_name, .keep_all = TRUE)
  
  est_type_metrics <- est_type_metrics %>%
-      left_join(bioreg , by = "full_ecosystem_type_name" )
- 
+      left_join(bioreg , by = "full_ecosystem_type_name" ) %>%
+      mutate(biogeographical_zone = str_sub(biogeographical_zone, 2)) %>%
+      relocate(biogeographical_zone, .after = full_ecosystem_type_name) 
+      
     
    # export a csv of results - Condition and EPL per river type 2018 and 2024
    write.csv(est_type_metrics, file = "outputs/epl_est_metrics_per_type.csv")
@@ -265,7 +268,7 @@ est_type_pa24_hfp <- est %>%
   bind_rows(summarise(., biogeographical_zone = "Total", across(where(is.numeric), sum))) %>%
   # Add EPLindex
   mutate(EPLI = ((WP*3)+(MP*2)+(PP*1)+(NP*0))/((WP+MP+PP+NP)*3)) %>%
-    mutate(biogeographical_zone = factor(biogeographical_zone, levels = c("Total", "dTropical", "cSubTrop" , "bWTemp", "aCTemp"))) %>% ## ggplot plots inverted factors!
+    mutate(biogeographical_zone = factor(biogeographical_zone, levels = c("Total", "Tropical", "SubTrop" , "WTemp", "CTemp"))) %>% ## ggplot plots inverted factors!
    arrange(biogeographical_zone)
  
  # export a csv of results - COUNT of EPL 18 per biogr 
@@ -285,7 +288,7 @@ est_type_pa24_hfp <- est %>%
   ungroup() %>%
   # Add TOTAL row (column-wise sums)
   bind_rows(summarise(., hgm_simple = "Total", across(where(is.numeric), sum))) %>%
-    mutate(biogeographical_zone = factor(biogeographical_zone, levels = c("Total", "dTropical", "cSubTrop" , "bWTemp", "aCTemp"))) %>% ## ggplot plots inverted factors!
+    mutate(biogeographical_zone = factor(biogeographical_zone, levels = c("Total", "Tropical", "SubTrop" , "WTemp", "CTemp"))) %>% ## ggplot plots inverted factors!
    arrange(biogeographical_zone)
  
  # export a csv of results - EXTENT (km) of EPL 18 per slope zone
@@ -317,7 +320,7 @@ est_type_pa24_hfp <- est %>%
   bind_rows(summarise(., biogeographical_zone = "Total", across(where(is.numeric), sum))) %>%
   # Add EPLindex
   mutate(EPLI = ((WP*3)+(MP*2)+(PP*1)+(NP*0))/((WP+MP+PP+NP)*3)) %>%
-     mutate(biogeographical_zone = factor(biogeographical_zone, levels = c("Total", "dTropical", "cSubTrop" , "bWTemp", "aCTemp"))) %>% ## ggplot plots inverted factors!
+     mutate(biogeographical_zone = factor(biogeographical_zone, levels = c("Total", "Tropical", "SubTrop" , "WTemp", "CTemp"))) %>% ## ggplot plots inverted factors!
    arrange(biogeographical_zone)
  
   
@@ -327,7 +330,7 @@ est_type_pa24_hfp <- est %>%
  # make summary of extent of EPL
  epl24_sum_ext <- est_type_metrics %>%
     group_by(EPL24_model, biogeographical_zone) %>%
-  summarise(extent = round(sum(tot_ext18)/10000, 0),.groups = 'drop') %>% # note the total est extent 2018 and 2024 is same
+  summarise(extent = round(sum(tot_ext18)/1000000, 0),.groups = 'drop') %>% # note the total est extent 2018 and 2024 is same
   pivot_wider(names_from = EPL24_model, 
               values_from = extent, values_fill = 0) %>%
   relocate(WP, .before = MP)%>%
@@ -338,7 +341,7 @@ est_type_pa24_hfp <- est %>%
   ungroup() %>%
   # Add TOTAL row (column-wise sums)
   bind_rows(summarise(., biogeographical_zone = "Total", across(where(is.numeric), sum))) %>%
-   mutate(biogeographical_zone = factor(biogeographical_zone, levels = c("Total", "dTropical", "cSubTrop" , "bWTemp", "aCTemp"))) %>% ## ggplot plots inverted factors!
+   mutate(biogeographical_zone = factor(biogeographical_zone, levels = c("Total", "Tropical", "SubTrop" , "WTemp", "CTemp"))) %>% ## ggplot plots inverted factors!
    arrange(biogeographical_zone)
  
  
@@ -402,14 +405,14 @@ EPL24ext <- epl24_sum_ext %>%
     rename(`Well Protected` = WP, 
            `Moderately Protected` = MP, 
            `Poorly Protected` = PP, 
-           `Not Protected` = NP ) # %>%
-  # select(-...1) # required if importing from CSV
+           `Not Protected` = NP ) 
+  
  
 epl24_bar_plot_ext <- nba_plot(EPL24ext,
                   `biogeographical_zone`,
                   2:5,
                  CHRT = "bar",
-                 NUM = FALSE,
+                 NUM = TRUE,
                  LAB = "Percentage of ecosystem extent",
                 SAVE = NULL, 
                 SCALE_TEXT = 0.6)
@@ -453,10 +456,10 @@ EPLI <- epl24_sum %>%
   scale_x_discrete(limits = c("2018", "2024"), expand = c(0, 0)) +
   scale_color_manual(values = c(
     "Total" = "black",
-    "aCTemp" = "blue",
-    "bWTemp" = "darkgreen",
-    "cSubTrop" = "brown",
-    "dTropical" = "orange"
+    "CTemp" = "blue",
+    "WTemp" = "darkgreen",
+    "SubTrop" = "brown",
+    "Tropical" = "orange"
   )) +
   coord_cartesian(ylim = c(0.4, 0.8))+ # Commented out or adjust as needed
   guides(color = guide_legend(reverse = TRUE),
@@ -474,11 +477,11 @@ ggsave(
 
 ```{r}
 # Prepare output spatial data 
-est_epl_res_v <- est_v2 %>%
-  left_join(est_t2, by = "outletID") %>%
-  select(outletID, full_ecosystem_type_name, est_name) %>%
-  left_join(est_type_metrics, by = "full_ecosystem_type_name") %>%
-  relocate(biogeographical_zone, .after = full_ecosystem_type_name)
- 
-st_write(est_epl_res_v, "C:/Users/skownoa/Dropbox/NBAwork/Estuaries/est_epl_results.gpkg") 
+# est_epl_res_v <- est_v2 %>%
+#   left_join(est_t2, by = "outletID") %>%
+#   select(outletID, full_ecosystem_type_name, est_name) %>%
+#   left_join(est_type_metrics, by = "full_ecosystem_type_name") %>%
+#   relocate(biogeographical_zone, .after = full_ecosystem_type_name)
+#  
+# st_write(est_epl_res_v, "C:/Users/skownoa/Dropbox/NBAwork/Estuaries/est_epl_results.gpkg") 
 ```
