@@ -195,7 +195,7 @@ est_type_pa24_hfp <- est %>%
   pivot_wider(names_from = fishing_effort24, values_from = extent,values_fill = list(extent = 0))  %>%
   mutate(ext_pa24_hfp = rowSums(across(c(VH, H)))) %>%
   select(full_ecosystem_type_name, ext_pa24_hfp)
- 
+
  # Join the 4 tables above - this makes a single table in which all the required metrics can be found to compute EPL (note tot ext 18 and to ext 24 are identical )
  
  est_type_metrics <- est_type_18 %>%
