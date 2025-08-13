@@ -210,7 +210,7 @@ est_type_pa24_hfp <- est %>%
    # WP rule requires extent A and B within PA; less high fishing pressure areas within PA
    mutate(prp_pa18_ab_hfp = (A18 + B18 - ext_pa18_hfp)/tot_ext18) %>% 
    # MP PP NP requires proportioal contribution based on condition
-   mutate(prp_pa18_model = (A18 + B18 + (0.5*C18) + (0.3*D18) + (0.1*E18))/tot_ext18) %>%
+   mutate(prp_pa18_model = (A18 + B18 + (0.3*(C18+D18))  + (0.1*E18))/tot_ext18) %>%
    mutate(EPL18_all = case_when( prp_pa18 >= 0.3 ~ "WP", 
                                  prp_pa18 >= 0.15 ~ "MP",
                                  prp_pa18 >= 0.015 ~ "PP",
@@ -224,7 +224,7 @@ est_type_pa24_hfp <- est %>%
    # WP rule requires extent A and B within PA; less high fishing pressure areas within PA
       mutate(prp_pa24_ab_hfp = (A + B - ext_pa24_hfp)/tot_ext18) %>% 
    # MP PP NP requires proportioal contribution base don condition
-   mutate(prp_pa24_model = (A + B + (0.5*C) + (0.3*D) + (0.1*E))/tot_ext18) %>%
+   mutate(prp_pa24_model = (A + B + (0.3*(C+D)) + (0.1*E))/tot_ext18) %>%
    mutate(EPL24_all = case_when( prp_pa24 >= 0.3 ~ "WP", 
                                  prp_pa24 >= 0.15 ~ "MP",
                                  prp_pa24 >= 0.015 ~ "PP",
@@ -470,7 +470,7 @@ EPLI <- epl24_sum %>%
 ggsave(
   filename = "outputs/epli_est_line_plot.jpeg", 
   plot = epli_line_plot,                   
-  width = 12, height = 10, units = "cm")
+  width = 14, height = 9, units = "cm")
 
 # for pdf use device = "pdf" and drop resolution 
 ```

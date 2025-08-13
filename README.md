@@ -26,11 +26,11 @@ Protection Level is an indicator developed in South Africa that measures the rep
 
 -   Well Protected: 100% of the PA target within PA network; AND only A&B condition estuaries contribute; AND areas under heavy and very heavy fishing pressure are excluded from contributing
 
--   Moderately Protected: 50% to 99% of PA target within the PA network; and A&B condition estuaries contribute 100%, C condition estuaries contribute 50%, D condition estuaries contribute 30% and E&F condition estuaries contribute 10%
+-   Moderately Protected: 50% to 99% of PA target within the PA network; and A&B condition estuaries contribute 100%, C & D condition estuaries contribute 30% and E&F condition estuaries contribute 10%
 
--   Poorly Protected: 5% to 49% of PA target within the PA network; and A&B condition estuaries contribute 100%, C condition wetlands contribute 50%, D condition estuaries contribute 30% and E&F condition estuaries contribute 10%
+-   Poorly Protected: 5% to 49% of PA target within the PA network; and A&B condition estuaries contribute 100%, C & D condition estuaries contribute 30% and E&F condition estuaries contribute 10%
 
--   Not Protected: less than 5% of PA target within the PA network; and A&B condition estuaries contribute 100%, C condition wetlands contribute 50%, D condition estuaries contribute 30% and E&F condition estuaries contribute 10%
+-   Not Protected: less than 5% of PA target within the PA network; and A&B condition estuaries contribute 100%, C & D condition estuaries contribute 30% and E&F condition estuaries contribute 10%
 
 The PA target was historically set at 20% for marine and estuarine ecosystems, but with the adoption of the 30% targets for Target 3 of the Global Biodiversity Framework - the PA target was increased to 30% in the EPL calculations (previous time points (2018) were recalculated using this higher target). Ecosystem condition data (van Niekerk et al., 2025) for each time point allow for only good condition estuaries without heavey fishing pressure (especially gill-netting) to be considered representative for Well Protected status; while for MP, PP and NP the condition of the estuaries is used to calculate their contribution to meeting targets such that higher integrity / condition estuaries contribute more to meeting PA targets than low integrity / condition estuaries.
 
