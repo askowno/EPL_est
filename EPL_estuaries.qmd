@@ -137,7 +137,7 @@ est <- est %>%
     TRUE ~ "E"
   )) 
 
-
+write.csv(est, file = "outputs/est_pa_metrics290.csv")
 ```
 
 #### Summarise data per type
